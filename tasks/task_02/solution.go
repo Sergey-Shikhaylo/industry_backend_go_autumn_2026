@@ -1,37 +1,28 @@
 package main
 
 import (
-	"strings"
 	"unicode/utf8"
 )
-
-func runeIdx(s string, number int) int {
-	count := 1
-	for i := range s {
-		if count == number {
-			return i
-		}
-		count++
-	}
-	return 0
-}
 
 func rotateRunes(s string, shift int) string {
 	if s == "" {
 		return ""
 	}
 
+	r := []rune(s)
+
+	//если сдвига нет, битые руны всё равно нужно заменить.
 	if shift == 0 {
-		return s
+		return string(r)
 	}
 
-	s = strings.ToValidUTF8(s, "")
-	check_shift := shift
-	if shift > utf8.RuneCountInString(s) {
-		check_shift = shift % utf8.RuneCountInString(s)
+	//проверяем наше число сдвига, чтобы не выходило за пределы длины строки
+	check_shift := shift % utf8.RuneCountInString(s)
+	if shift < 0 {
+		check_shift += utf8.RuneCountInString(s)
 	}
-	shiftIdx := runeIdx(s, check_shift)
 
-	return s[shiftIdx:] + s[:shiftIdx]
+	result := append(r[check_shift:], r[:check_shift]...)
+	return string(result)
 
 }
