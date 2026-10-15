@@ -13,5 +13,9 @@ type Result[R any] struct {
 var ErrInvalidWorkers = errors.New("workers must be positive")
 
 func ParallelMap[T any, R any](ctx context.Context, workers int, in []T, fn func(context.Context, T) (R, error)) ([]Result[R], error) {
-	panic("TODO: implement")
+	if workers <= 0 {
+		return nil, ErrInvalidWorkers
+	}
+
+	return nil, ErrInvalidWorkers
 }
