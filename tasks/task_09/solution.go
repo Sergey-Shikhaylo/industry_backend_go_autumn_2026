@@ -27,26 +27,47 @@ func ParallelMap[T any, R any](ctx context.Context, workers int, in []T, fn func
 
 	arrResult := make([]Result[R], len(in))
 
-	for i := 0; i < len(in); {
-		var wg sync.WaitGroup
-		select {
-		case <-ctx.Done():
-			wg.Wait()
-			return nil, ctx.Err()
-		default:
-			for g := 0; g < min(workers, len(in)-i); g++ {
-				wg.Go(func() {
-					val, err := fn(ctx, in[i+g])
-					if err != nil {
-						arrResult[i+g].Err = err
+	var wg sync.WaitGroup
+	ch := make(chan int)
+
+	for g := 0; g < min(workers, len(in)); g++ {
+		wg.Go(func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case idx, ok := <-ch:
+					if !ok {
 						return
 					}
-					arrResult[i+g].Value = val
-				})
+					val, err := fn(ctx, in[idx])
+					if err != nil {
+						arrResult[idx].Err = err
+						continue
+					}
+					arrResult[idx].Value = val
+				}
+
 			}
-			wg.Wait()
-			i += min(workers, len(in)-i)
-		}
+		})
 	}
+
+	wg.Go(func() {
+		defer close(ch)
+		for i := range in {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- i:
+			}
+		}
+	})
+
+	wg.Wait()
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	return arrResult, nil
 }
